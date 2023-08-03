@@ -168,21 +168,33 @@ contract MoonbaseCaptainURI is Ownable {
             '<style>',rule_base(),rule_big(),rule_small(),extraCss,'</style>'));
     }
 
+    string[7] tiers = [
+        "Average",
+        "Good",
+        "Very Good",
+        "Great",
+        "Fantastic",
+        "Perfect",
+        "Godlike"
+    ];
+
     function _propsvg(uint256 tokenId, uint256 y, string memory property) internal view returns (string memory) {
         return string(abi.encodePacked(
             svg.textOpen(32,y,"base"),
             property,
             ": ",
-            toString(captain.val(tokenId, property)),
+            tiers[captain.val(tokenId, property)],
             svg.textClose()));
     }
+
+    
 
 
     // get the tokenURI
     function tokenURI(uint256 tokenId) public view returns (string memory) {
         (uint256 dex, uint256 wis, uint256 chr) = captain.getStats(tokenId);
 
-        string[17] memory parts;
+        string[8] memory parts;
         uint256 gutter = 16;
         parts[0] = string(abi.encodePacked(
             svg.begin(),style(),svg.bgRect("000000")));
@@ -205,18 +217,41 @@ contract MoonbaseCaptainURI is Ownable {
             "Charisma: ",
             toString(chr),
             svg.textClose()));
+
+        parts[5] = string(abi.encodePacked(
+            svg.textOpen(gutter*2,112,"base small"),
+            "Random Properties",
+            svg.textClose()));
+
+        parts[6] = string(abi.encodePacked(
+            _propsvg(tokenId, 124, "Leadership"),
+            _propsvg(tokenId, 140, "Empathy"),
+            _propsvg(tokenId, 156, "Creativity"),
+            _propsvg(tokenId, 172, "Ambition"),
+            _propsvg(tokenId, 188, "Patience"),
+            _propsvg(tokenId, 204, "Friendliness"),
+            _propsvg(tokenId, 220, "Happiness")
+            ));
+        parts[7] = string(abi.encodePacked(
+            _propsvg(tokenId, 236, "Natural Speed"),
+            _propsvg(tokenId, 252, "Natural Strength"),
+            _propsvg(tokenId, 268, "Body Attractiveness"),
+            _propsvg(tokenId, 284, "Face Attractiveness")
+            ));
+
         
         
         string memory preOutput = string(abi.encodePacked(
-            parts[0], parts[1], parts[2], parts[3], parts[4], _propsvg(tokenId, 112, "Leadership")));
+            parts[0], 
+            parts[1], 
+            parts[2], 
+            parts[3], 
+            parts[4]));
+        
+        
         string memory output = string(abi.encodePacked(
             preOutput,
-            _propsvg(tokenId, 128, "Empathy"),
-            _propsvg(tokenId, 144, "Creativity"),
-            _propsvg(tokenId, 160, "Ambition"),
-            _propsvg(tokenId, 176, "Attractiveness"),
-            _propsvg(tokenId, 192, "Friendliness"),
-            _propsvg(tokenId, 208, "Happiness"),
+            parts[5], parts[6], parts[7],
             '<text x="248" y="330" class="base small">Moonbase Captain</text>',
             '<line x1="16" y1="16" x2="16" y2="334" stroke="white"/>',
             '</svg>'));
