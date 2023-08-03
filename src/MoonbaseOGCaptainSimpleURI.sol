@@ -219,9 +219,11 @@ contract MoonbaseCaptainURI is Ownable {
             svg.textClose()));
 
         parts[5] = string(abi.encodePacked(
-            svg.textOpen(gutter*2,112,"base small"),
+            svg.textOpen(gutter*2,108,"base small"),
             "Random Properties",
-            svg.textClose()));
+            svg.textClose(),
+            svg.line(gutter*2,110,240,110)
+            ));
 
         parts[6] = string(abi.encodePacked(
             _propsvg(tokenId, 124, "Leadership"),
