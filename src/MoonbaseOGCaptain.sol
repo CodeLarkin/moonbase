@@ -1,7 +1,3 @@
-/**
- *Submitted for verification at basescan.org on 2023-08-02
-*/
-
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
@@ -1288,24 +1284,114 @@ abstract contract ERC721Enumerable is ERC721, IERC721Enumerable {
         _allTokens.pop();
     }
 }
+/**
+ * @dev External interface of AccessControl declared to support ERC165 detection.
+ */
+interface IAccessControl {
+    /**
+     * @dev Emitted when `newAdminRole` is set as ``role``'s admin role, replacing `previousAdminRole`
+     *
+     * `DEFAULT_ADMIN_ROLE` is the starting admin for all roles, despite
+     * {RoleAdminChanged} not being emitted signaling this.
+     *
+     * _Available since v3.1._
+     */
+    event RoleAdminChanged(bytes32 indexed role, bytes32 indexed previousAdminRole, bytes32 indexed newAdminRole);
 
-contract MoonbaseOGCaptain is ERC721Enumerable, ReentrancyGuard, Ownable {
+    /**
+     * @dev Emitted when `account` is granted `role`.
+     *
+     * `sender` is the account that originated the contract call, an admin role
+     * bearer except when using {AccessControl-_setupRole}.
+     */
+    event RoleGranted(bytes32 indexed role, address indexed account, address indexed sender);
+
+    /**
+     * @dev Emitted when `account` is revoked `role`.
+     *
+     * `sender` is the account that originated the contract call:
+     *   - if using `revokeRole`, it is the admin role bearer
+     *   - if using `renounceRole`, it is the role bearer (i.e. `account`)
+     */
+    event RoleRevoked(bytes32 indexed role, address indexed account, address indexed sender);
+
+    /**
+     * @dev Returns `true` if `account` has been granted `role`.
+     */
+    function hasRole(bytes32 role, address account) external view returns (bool);
+
+    /**
+     * @dev Returns the admin role that controls `role`. See {grantRole} and
+     * {revokeRole}.
+     *
+     * To change a role's admin, use {AccessControl-_setRoleAdmin}.
+     */
+    function getRoleAdmin(bytes32 role) external view returns (bytes32);
+
+    /**
+     * @dev Grants `role` to `account`.
+     *
+     * If `account` had not been already granted `role`, emits a {RoleGranted}
+     * event.
+     *
+     * Requirements:
+     *
+     * - the caller must have ``role``'s admin role.
+     */
+    function grantRole(bytes32 role, address account) external;
+
+    /**
+     * @dev Revokes `role` from `account`.
+     *
+     * If `account` had been granted `role`, emits a {RoleRevoked} event.
+     *
+     * Requirements:
+     *
+     * - the caller must have ``role``'s admin role.
+     */
+    function revokeRole(bytes32 role, address account) external;
+
+    /**
+     * @dev Revokes `role` from the calling account.
+     *
+     * Roles are often managed via {grantRole} and {revokeRole}: this function's
+     * purpose is to provide a mechanism for accounts to lose their privileges
+     * if they are compromised (such as when a trusted device is misplaced).
+     *
+     * If the calling account had been granted `role`, emits a {RoleRevoked}
+     * event.
+     *
+     * Requirements:
+     *
+     * - the caller must be `account`.
+     */
+    function renounceRole(bytes32 role, address account) external;
+}
+
+interface IVisualizer {
+    function tokenURI(uint256 tokenId) external view returns (string memory);
+}
+
+
+contract MoonbaseOGCaptain is ERC721Enumerable, ReentrancyGuard, Ownable, AccessControl {
+
+    bytes32 public constant XP_ADMIN = keccak256("XP_ADMIN");
+    bytes32 public constant REP_ADMIN = keccak256("REP_ADMIN");
 
     uint256 public MAX_SUPPLY = 69420;
-    address public visualizer;
+    IVisualizer public visualizer;
 
     mapping (uint256 => uint256) public dexById;
     mapping (uint256 => uint256) public wisById;
     mapping (uint256 => uint256) public chrById;
-
-    //constructor(IVisualizer _visualizer) ERC721("Moonbase Captains", "CPTN") Ownable() {        
+   
     constructor(address _visualizer) ERC721("Moonbase Captains", "CPTN") Ownable() {        
-        visualizer = _visualizer;
+        visualizer = IVisualizer(_visualizer);
     }
 
-    //function setVisualizer(IVisualizer _visualizer) external onlyOwner {
+
     function setVisualizer(address _visualizer) external onlyOwner {
-        visualizer = _visualizer;
+        visualizer = IVisualizer(_visualizer);
     }
 
     address payable public taxManager = payable(0x0d64E4dC1283d3A4A5F7aF3f9D58128f6dFC0D6A);
