@@ -60,7 +60,7 @@ A Captain can check their radar to see what planets, moons, other Captains, NPCs
 ### Sleeping in spaceports
 A Captain is vulnerable in space! Sleeping in a spaceport will protect you from pirates. Over time you will accumulate debt. If your debt exceeds your credit balance, you will be ejected into space and will be vulnerable again!
 > Note: Captain's `isInSpaceport` and `creditBalance` are storage entries in the Game contract, but the `getIsInSpaceport()` and `getCreditBalance()` view functions are dynamic. You accumulate debt over time. If your `debt > credits`, you are ejected to space. At that time, an enemy will see you as vulnerable because your `getIsInSpaceport()` returns false.
-> Note: if you can enter a spaceport and have protection for a year but never pay your debt, you could transfer your credits away and you just had protection for free.
+> Note: if you can enter a spaceport and have protection for a year but never pay your debt, you could transfer your credits away and you just had protection for free. Maybe you need to pay up-front if you are planning to stay at a spaceport for > 1 week.
 
 ### Captain needs warp fuel
 A Captain starts the game with some amount of warp fuel (1000) upon joining.
