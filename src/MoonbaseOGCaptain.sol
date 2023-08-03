@@ -1372,6 +1372,7 @@ interface IVisualizer {
     function tokenURI(uint256 tokenId) external view returns (string memory);
 }
 
+import {AccessControl} from "openzeppelin-contracts/access/AccessControl.sol";
 
 contract MoonbaseOGCaptain is ERC721Enumerable, ReentrancyGuard, Ownable, AccessControl {
 
