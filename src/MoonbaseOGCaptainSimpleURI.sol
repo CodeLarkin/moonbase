@@ -203,7 +203,7 @@ contract MoonbaseCaptainURI is Ownable {
             parts[0], parts[1], parts[2], parts[3], parts[4]));
         string memory output = string(abi.encodePacked(
             preOutput,
-            '<text x="248" y="330" class="base small">Deliland Captain</text>',
+            '<text x="248" y="330" class="base small">Moonbase Captain</text>',
             '<line x1="16" y1="16" x2="16" y2="334" stroke="white"/>',
             '</svg>'));
 
