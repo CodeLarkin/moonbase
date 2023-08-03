@@ -1254,9 +1254,7 @@ contract MoonbaseOGCaptain is ERC721Enumerable, ReentrancyGuard, Ownable {
 
     uint256 public nextTokenId = 1;
 
-    constructor(address _visualizer) ERC721("Moonbase Captains", "CPTN") Ownable() {        
-        visualizer = IVisualizer(_visualizer);
-    }
+    constructor() ERC721("Moonbase Captains", "CPTN") Ownable() { }
 
     function setVisualizer(address _visualizer) external onlyOwner {
         visualizer = IVisualizer(_visualizer);

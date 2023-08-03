@@ -119,14 +119,19 @@ abstract contract Ownable is Context {
 
 contract MoonbaseCaptainURI is Ownable {
     string public TITLE = "Moonbase Captain";
-    ISvg svg = ISvg(0xb6f0a8665b05f39b1FF5CB350DB31D4944A5b254);
-    ICaptain captain = ICaptain(0x91b94dd4459Ab25880b6cb507Cb832D3C3C525a8);
+    ISvg public svg;
+    ICaptain captain;
 
-    function changeSvgLib(address newSvgLib) public onlyOwner {
-        svg = ISvg(newSvgLib);
+    constructor(address _svg, address _captain) Ownable() {
+        svg = ISvg(_svg);
+        captain = ICaptain(_captain);
     }
-    function changeCaptainContract(address newCaptain) public onlyOwner {
-        captain = ICaptain(newCaptain);
+
+    function changeSvgLib(address _svg) public onlyOwner {
+        svg = ISvg(_svg);
+    }
+    function changeCaptainContract(address _captain) public onlyOwner {
+        captain = ICaptain(_captain);
     }
 
     function blurb() internal pure returns (string memory) {
@@ -260,9 +265,7 @@ contract MoonbaseCaptainURI is Ownable {
 
         return jsonify(tokenId, output);
     }
-    constructor () Ownable() {
 
-    }
     function toString(uint256 value) internal pure returns (string memory) {
     // Inspired by OraclizeAPI's implementation - MIT license
     // https://github.com/oraclize/ethereum-api/blob/b42146b063c7d6ee1358846c198246239e9360e8/oraclizeAPI_0.4.25.sol
@@ -285,6 +288,7 @@ contract MoonbaseCaptainURI is Ownable {
         return string(buffer);
     }
 }
+
 /// [MIT License]
 /// @title Base64
 /// @notice Provides a function for encoding some bytes in base64
