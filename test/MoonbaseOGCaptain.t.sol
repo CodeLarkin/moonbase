@@ -34,17 +34,13 @@ contract MoonbaseOGcaptainimpleTest is Test {
     function testMint() public {
         string[] memory uris = new string[](NUM_NFTS);
         for (uint256 tokenId = FIRST_TOKEN_ID; tokenId < NUM_NFTS + FIRST_TOKEN_ID; tokenId++) {
-            console2.log("tokenId: %s", tokenId);
-
             setSenderAndFund(owner, 1 ether);
             string memory name = string.concat("Captain ", vm.toString(tokenId));
             captain.mint(name, 5, 5, 5);
 
             assertEq(captain.ownerOf(tokenId), owner);
 
-            console2.log("here0");
             uris[tokenId - FIRST_TOKEN_ID] = captain.tokenURI(tokenId); // FIXME(dbanks12): failing here!
-            console2.log("here1");
         }
         string memory urisJson = vm.serializeString("", "uris", uris);
         vm.writeJson(urisJson, "./gen/captainURIs.json");
