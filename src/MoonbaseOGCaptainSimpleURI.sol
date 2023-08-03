@@ -24,7 +24,7 @@ interface ISvg {
      uint256 maxX, uint256 maxY) external pure returns (string memory);
 }
 interface ICaptain {
-    function val(uint256 tokenId, string memory property) external view returns (string memory);
+    function val(uint256 tokenId, string memory property) external view returns (uint256);
     function getStats(uint256 tokenId) external view returns (uint256, uint256, uint256);
     function getName(uint256 tokenId) external view returns (string memory);
 }
@@ -120,7 +120,7 @@ abstract contract Ownable is Context {
 contract MoonbaseCaptainURI is Ownable {
     string public TITLE = "Moonbase Captain";
     ISvg svg = ISvg(0xb6f0a8665b05f39b1FF5CB350DB31D4944A5b254);
-    ICaptain captain = ICaptain(0xDf20eC717448b8Eaae9104df2A308150F5601d21);
+    ICaptain captain = ICaptain(0x91b94dd4459Ab25880b6cb507Cb832D3C3C525a8);
 
     function changeSvgLib(address newSvgLib) public onlyOwner {
         svg = ISvg(newSvgLib);
@@ -168,6 +168,15 @@ contract MoonbaseCaptainURI is Ownable {
             '<style>',rule_base(),rule_big(),rule_small(),extraCss,'</style>'));
     }
 
+    function _propsvg(uint256 tokenId, uint256 y, string memory property) internal view returns (string memory) {
+        return string(abi.encodePacked(
+            svg.textOpen(32,y,"base"),
+            property,
+            ": ",
+            toString(captain.val(tokenId, property)),
+            svg.textClose()));
+    }
+
 
     // get the tokenURI
     function tokenURI(uint256 tokenId) public view returns (string memory) {
@@ -196,13 +205,18 @@ contract MoonbaseCaptainURI is Ownable {
             "Charisma: ",
             toString(chr),
             svg.textClose()));
-            
-
+        
         
         string memory preOutput = string(abi.encodePacked(
-            parts[0], parts[1], parts[2], parts[3], parts[4]));
+            parts[0], parts[1], parts[2], parts[3], parts[4], _propsvg(tokenId, 112, "Leadership")));
         string memory output = string(abi.encodePacked(
             preOutput,
+            _propsvg(tokenId, 128, "Empathy"),
+            _propsvg(tokenId, 144, "Creativity"),
+            _propsvg(tokenId, 160, "Ambition"),
+            _propsvg(tokenId, 176, "Attractiveness"),
+            _propsvg(tokenId, 192, "Friendliness"),
+            _propsvg(tokenId, 208, "Happiness"),
             '<text x="248" y="330" class="base small">Moonbase Captain</text>',
             '<line x1="16" y1="16" x2="16" y2="334" stroke="white"/>',
             '</svg>'));
