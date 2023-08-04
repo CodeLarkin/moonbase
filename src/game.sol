@@ -62,7 +62,7 @@ contract MoonbasePermaverseAlpha {
 
 	
 
-	
+
 
 	function _userIsHere(uint256 tokenId, uint256 location) internal {
 		require(locationById[tokenId] == location, "user is not here");
@@ -75,10 +75,16 @@ contract MoonbasePermaverseAlpha {
 		require(captain.ownerOf(tokenId) == sender, "does not own the captain");
 	}
 
+
 	mapping(address => uint256) captainByAddress;
 	function _setCaptain(uint256 id, address user) internal {
 		_isCaptainOwner(id, user);
 		captainByAddress[user] = id;
+	}
+
+	function _user(address sender) internal view returns (uint256) {
+		require(captain.ownerOf(captainByAddress[sender]) == sender, "sender not the owner");
+		return captainByAddress[sender];
 	}
 
 	mapping (uint256 => uint256) discovererBySystemId;
@@ -87,17 +93,215 @@ contract MoonbasePermaverseAlpha {
 	// ship state
 	mapping (uint256 => uint256) shieldsById;
 	mapping (uint256 => uint256) energyById;
+	mapping (uint256 => uint256) filledHardwareSlotsById;
+	mapping (uint256 => uint256[]) hardwareBalancesById;
 
-	// ship equips
-	mapping (uint256 => uint256) weaponById;
-	mapping (uint256 => uint256) shipmod1ById;
-	mapping (uint256 => uint256) shipmod2ById;
-	mapping (uint256 => uint256) shipmod3ById;  
 	
+
+
+	// --------------------------------------------------------------------------------------
+	// --------------------------------------------------------------------------------------
+	// --------------------------------------------------------------------------------------
+	// Ships ------------------------------------------------------------------------
+
+	struct Ship {
+        uint256 id; 
+        string name; 
+        string description; 
+        string imgdata;
+        uint256 totalSupply;
+        uint256 cost;
+        uint256 shield_capacity;
+        uint256 cargo_holds;
+        uint256 hardware_slots;
+        uint256 top_speed;
+        uint256 turning;
+        uint256 thrust;
+        uint256 energy_regen;
+        uint256 fuel_per_warp;
+    }
+
+    // ship equips
+	mapping (uint256 => uint256) weaponById;
+	mapping (uint256 => uint256) shipmodById;
 	mapping(uint256 => uint256) activeShipById;
 
+
+	struct Weapon {
+		uint256 id;
+		string memory name;
+		uint256 cost;
+		uint256 damage;
+		uint256 energy_use;
+		uint256 fire_rate;
+	}
+
+	mapping (uint256 => Weapon) weaponByWeaponId;
+
+	function _addWeapon(
+		uint256 id,
+		string memory name,
+		uint256 cost,
+		uint256 damage,
+		uint256 energy_use,
+		uint256 fire_rate
+		) internal {
+		require(weaponByWeaponId[id].id != id,"weapon exists");
+		weaponByWeaponId[id] = Weapon(id, name, cost, damage, energy_use, fire_rate);
+	}
+
+	function addWeapon(
+		uint256 id,
+		string memory name,
+		uint256 cost,
+		uint256 damage,
+		uint256 energy_use,
+		uint256 fire_rate) public onlyOwner {
+		_addWeapon(id, name, cost, damage, energy_use, fire_rate);
+	}
+
+	function _weapon(uint256 id) internal view returns (Weapon memory) {
+		return weaponByWeaponId[id];
+	}
+
+	function modifyWeapon(
+		uint256 id,
+		string memory name,
+		uint256 cost,
+		uint256 damage,
+		uint256 energy_use,
+		uint256 fire_rate) public onlyOwner {
+		weaponByWeaponId[id] = Weapon(id, name, cost, damage, energy_use, fire_rate);
+	}
+
+	struct ShipMod {
+		uint256 id;
+		string memory name;
+		uint256 cost;
+	}
+
+	mapping (uint256 => ShipMod) shipModByShipModId;
+
+	function _addShipMod(
+		uint256 id,
+		string memory name,
+		uint256 cost
+		) internal {
+		require(shipModByShipModId[id].id != id,"shipMod exists");
+		shipModByShipModId[id] = ShipMod(id, name, cost, damage, energy_use, fire_rate);
+	}
+
+	function addShipMod(
+		uint256 id,
+		string memory name,
+		uint256 cost) public onlyOwner {
+		_addShipMod(id, name, cost, damage, energy_use, fire_rate);
+	}
+
+	function _shipMod(uint256 id) internal view returns (ShipMod memory) {
+		return shipModByShipModId[id];
+	}
+
+	function modifyShipMod(
+		uint256 id,
+		string memory name,
+		uint256 cost) public onlyOwner {
+		shipModByShipModId[id] = ShipMod(id, name, cost, damage, energy_use, fire_rate);
+	}
+
+	struct Hardware {
+		uint256 id;
+		string memory name;
+		uint256 cost;
+	}
+
+	mapping (uint256 => Hardware) hardwareByHardwareId;
+
+	function _addHardware(
+		uint256 id,
+		string memory name,
+		uint256 cost
+		) internal {
+		require(hardwareByHardwareId[id].id != id,"hardware exists");
+		hardwareByHardwareId[id] = Hardware(id, name, cost, damage, energy_use, fire_rate);
+	}
+
+	function addHardware(
+		uint256 id,
+		string memory name,
+		uint256 cost) public onlyOwner {
+		_addHardware(id, name, cost, damage, energy_use, fire_rate);
+	}
+
+	function _hardware(uint256 id) internal view returns (Hardware memory) {
+		return hardwareByHardwareId[id];
+	}
+
+	function modifyHardware(
+		uint256 id,
+		string memory name,
+		uint256 cost) public onlyOwner {
+		hardwareByHardwareId[id] = Hardware(id, name, cost, damage, energy_use, fire_rate);
+	}
+
+
+
+    function _useFuel(uint256 user, uint256 amount) internal {
+    	require(fuelById[user] >= amount, "not enough fuel");
+    	fuelById[user] -= amount; 
+    }
+
+
+    uint256 fuel_reduction_per_wis = 2;
+    uint256 shipMod_fuelReducer_id = 1;
+    uint256 shipMod_fuel_reduction = 10;
+    function _fuelCostToWarp(uint256 user) internal returns (uint256) {
+    	( , uint256 wis, ) = captain.getStats(user);
+    	uint256 active_ship = activeShipById[user];
+    	uint256 fpw = ships.itemById(active_ship).fuel_per_warp;
+    	uint256 user_fps = fpw - wis * fuel_reduction_per_wis;
+    	if (shipmodById[user] == shipMod_fuelReducer_id) {
+    		user_fps -= shipMod_fuel_reduction;
+    	}
+
+    	return user_fps;
+    }
+
+    uint256 fuel_shards_gen_per_block = 1;
+    uint256 fuel_shards_per_fuel = 12;
+    // assume 1 block per second
+    // in 120 blocks we want 10 fuel generated
+    // in 12 blocks we want 1 fuel generated 
+    mapping(uint256 => uint256) lastFuelClaimBlockById;
+    function _claimFuel(uint256 user) internal {
+    	uint256 blocks = block.number - lastFuelClaimBlockById[user];
+    	require(blocks >= 12, "wait longer");
+    	uint256 generatedFuelShards = fuel_shards_gen_per_block * blocks;
+    	require(generatedFuelShards >= 12, "not enough for one fuel");
+    	uint256 generatedFuel = generatedFuelShards/fuel_shards_per_fuel;
+    	lastFuelClaimBlockById[user] = block.number;
+    	fuelById[user] += generatedFuel;
+    }
+
+    function _landOnBody(uint256 user) internal {
+    	_claimFuel(user);
+    	_useFuel(user, 10);
+    	
+    }
+
+    function _warp(uint256 user, uint256 to) internal {
+    	_claimFuel(user);
+    	_useFuel(user, _fuelCostToWarp(user));
+    	locationById[user] = to;
+    	if (discovererBySystemId[to] == 0) {
+			discovererBySystemId[to] = user;
+			asteroidsBySystemId[to] = 1113527;
+		}
+    }
+
+
 	function warp(uint256 location) public {
-		uint256 user = captainByAddress[msg.sender];
+		uint256 user = _user(msg.sender);
 		uint256 loc = (location > 0) ? location - 1 : 0;
 	
 		if (locationById[user] > location) {
@@ -105,38 +309,233 @@ contract MoonbasePermaverseAlpha {
 		} else {
 			require(location - locationById[user] == 1, "not next to system");
 		}
-		
-		locationById[user] = location;
-		if (discovererBySystemId[location] == 0) {
-			discovererBySystemId[location] = user;
-			asteroidsBySystemId[location] = 1113527;
-		}
+		_warp(user, location);
+	}
+	// --------------------------------------------------------------------------------------
+	// --------------------------------------------------------------------------------------
+	// --------------------------------------------------------------------------------------
+	// SPACEBASE ---------------------------------------------------------------------
+	
+	// Spacebases sell ships and hardware and shields
+	// they provide access to the bank
+	// their locations are set at deployment
+	mapping(uint256 => bool) hasSpacebaseByLocation;
+	function _hasSpacebase(uint256 location) internal {
+		require(hasSpacebaseByLocation[location], "system does not have spacebase");
+	}
+	function _atSpacebase(address user) internal {
+		_hasSpacebase(locationById[_user(user)]);
+		require(fuelById[_user(user)] >= 1, "not enough fuel");
+	}
 
+	uint256 totalCreditsInSpacebases = 0;
+
+	function _creditsToSpacebase(address user, uint256 amount) internal {
+		_atSpacebase(user);
+		resources.safeTransferFrom(user,address(this),1,amount,bytes(""));
+		totalCreditsInSpacebases += amount;
+	}
+
+	function _creditsFromSpacebase(address user, uint256 amount) internal {
+		_atSpacebase(_user(sender));
+		if (totalCreditsInSpacebases >= amount) {
+			resources.safeTransferFrom(address(this),user,1,amount,bytes(""));
+			totalCreditsInSpacebases -= amount;
+		} else {
+			uint256 deficit = amount - totalCreditsInSpacebases;
+			resources.safeTransferFrom(address(this),user,1,totalCreditsInSpacebases,bytes(""));
+			totalCreditsInSpacebases = 0;
+			resources.mint(user,1,deficit);
+		}
+		
+	}
+	// buy and sell ships and shields ----------------------------------------------------------------------
+	function _isValidShip(uint256 shipId) internal {
+		require(shipId > 0, "0 invalid ship Id");
+		require(ships.itemById(shipId).id == shipId, "not a real ship");
+	}
+	function _sellShip(address user, uint256 shipId) internal {
+		_isValidShip(shipId);
+		_atSpacebase(user);
+		uint256 cost = ships.itemById(shipId).cost;
+		ships.burn(sender,activeShipById[_user(user)],1);
+		resources.mint(sender,1,cost/10);
+	}
+
+	function _buyShip(address user, uint256 shipId) internal {
+		_isValidShip(shipId);
+		_atSpacebase(user);
+		uint256 cost = ships.itemById(shipId).cost;
+		_creditsToSpacebase(user,cost);
+		ships.mint(user,activeShipById[_user(user)],1);
+	}
+
+	function buyNewShipSellOldShip(uint256 shipId) public {
+		uint256 user = _user(msg.sender);
+		uint256 cost = ships.itemById(shipId).cost;
+		uint256 active = activeShipById[user];
+		_sellShip(user,active);
+		_buyShip(user,shipId);
+		activeShipById[user] = shipId;
+		shieldsById[user] = 2000;
+		energyById[user] = 1000;
+	}
+	uint256 shield_cost = 5;
+	function _buyShields(address user, uint256 amount) internal {
+		_atSpacebase(user);
+		uint256 u = _user(user);
+		uint256 shieldcap = ships.itemById(active).shield_capacity;
+		uint256 currentShields = shieldsById[u];
+		require(currentShields + amount <= shieldcap,"too many shields");
+
+		_creditsToSpacebase(user,1,amount * shield_cost);
+		shieldsById[u] += amount;
+		
+	}
+	function buyShields(uint256 amount) public {
+		_buyShields(_user(msg.sender),amount);
+	}
+
+	function buyNewShipSellOldShipMaxShields(uint256 shipId) public {
+		uint256 u = _user(msg.sender);
+		uint256 cost = ships.itemById(shipId).cost;
+		uint256 active = activeShipById[u];
+		_sellShip(msg.sender,active);
+		_buyShip(msg.sender,shipId);
+		activeShipById[u] = shipId;
+		shieldsById[u] = 2000;
+		energyById[u] = 1000;
+		_buyShields(msg.sender, amount);
+	}
+
+	// buy and sell weapons ----------------------------------------------------------------------
+	function _isValidWeapon(uint256 weaponId) internal {
+		require(weaponId > 0, "0 invalid weapon Id");
+		require(weaponByWeaponId[weaponId].id == weaponId, "not a real weapon");
+	}
+
+	function _buyWeapon(address user, uint256 weaponId) internal {
+		_isValidWeapon(weaponId);
+		_atSpacebase(user);
+		uint256 u = _user(user);
+		require(weaponById[u] == 0, "user already has weapon");
+		uint256 cost = weaponByWeaponId[weaponId].cost;
+		_creditsToSpacebase(user,cost);
+		weaponById[u] = weaponId;
+	}
+
+	function _sellWeapon(address user, uint256 weaponId) internal {
+		_isValidWeapon(weaponId);
+		_atSpacebase(user);
+		uint256 u = _user(user);
+		require(weaponById[u] == weaponById, "does not have weapon");
+		uint256 cost = weaponByWeaponId[weaponId].cost;
+		_creditsFromSpacebase(user, cost/10);
+		weaponById[u] = 0;
+	}
+
+	function buyWeapon(uint256 weaponId) public {
+		uint256 u = _user(msg.sender);
+		if (weaponById[u] == 0) {
+			_buyWeapon(msg.sender, weaponId);
+		} else {
+			_sellWeapon(msg.sender, weaponId);
+			_buyWeapon(msg.sender, weaponId);
+		}
+	}
+
+	// buy and sell shipmods ----------------------------------------------------------------------
+	function _isValidShipMod(uint256 shipModId) internal {
+		require(shipModId > 0, "0 invalid shipModId");
+		require(shipModByShipModId[shipModId].id == shipModId, "not a real shipMod");
+	}
+	function _buyShipMod(address user, uint256 shipModId) internal {
+		_isValidShipMod(shipModId);
+		_atSpacebase(user);
+		uint256 u = _user(user);
+		require(shipModById[u] == 0, "user already has ShipMod");
+		uint256 cost = shipModByShipModId[shipModId].cost;
+		_creditsToSpacebase(user,cost);
+		shipModById[user] = shipModId;
+	}
+
+	function _sellShipMod(address user, uint256 shipModId) internal {
+		_isValidShipMod(shipModId);
+		_atSpacebase(user);
+		uint256 u = _user(user);
+		require(shipModById[u] == shipModId, "does not have shipmod");
+		uint256 cost = shipModByShipModId[shipModId].cost;
+		_creditsFromSpacebase(user, cost/10);
+		shipModById[u] = 0;
+	}
+
+	function buyShipMod(uint256 shipModId) public {
+		uint256 u = _user(msg.sender);
+		if (shipModById[u] == 0) {
+			_buyShipMod(msg.sender, shipModId);
+		} else {
+			_sellShipMod(msg.sender, shipModById[u]);
+			_buyShipMod(msg.sender, shipModId);
+		}
+	}
+
+	// buy and sell hardware ----------------------------------------------------------------------
+	function _isValidHardware(uint256 hardwareId) internal {
+		require(hardwareId > 0, "0 invalid hardwareId");
+		require(hardwareByHardwareId[hardwareId].id == hardwareId, "not a real hardwareId");
+	}
+	function _buyHardware(address user, uint256 hardwareId, uint256 amount) internal {
+		_isValidHardware(hardwareId);
+		_atSpacebase(user);
+		uint256 u = _user(user);
+		uint256 cost = hardwareByHardwareId[hardwareId].cost*amount;
+		require(filledHardwareSlotsById[u] + amount <= ships.itemById(activeShipById[u]).hardware_slots, "not enough hardware slots");
+		_creditsToSpacebase(user,cost);
+		filledHardwareSlotsById[u] += amount;
+		hardwareBalancesById[u][hardwareId] += amount;
+	}
+
+	function _sellHardware(address user, uint256 hardwareId, uint256 amount) internal {
+		_isValidHardware(hardwareId);
+		_atSpacebase(user);
+		uint256 u = _user(user);
+		require(hardwareBalancesById[u][hardwareId] >= amount, "not enough hardware");
+		uint256 cost = hardwareByHardwareId[hardwareId].cost*amount;
+		_creditsFromSpacebase(user, cost/10);
+		filledHardwareSlotsById[u] -= amount;
+		hardwareBalancesById[u][hardwareId] -= amount;
+	}
+
+	function buyHardware(uint256 hardwareId, uint256 amount) public {
+		_buyHardware(msg.sender, hardwareId, amount);
+	}
+
+	function sellHardware(uint256 hardwareId, uint256 amount) public {
+		_sellHardware(msg.sender, hardwareId, amount);
 	}
 
 
-	
 
 
-	
+
+
+
+
 
 	// --------------------------------------------------------------------------------------
 	// --------------------------------------------------------------------------------------
 	// --------------------------------------------------------------------------------------
 	// SPACEPORTS ------------------------------------------------------------------------
 	
-	// Major Spaceports sell ships and hardware and shields
-	// they provide access to the bank
-	// their locations are set at deployment
-	mapping(uint256 => bool) hasMajorSpaceportByLocation;
-	function _hasMajorSpaceport(uint256 location) internal returns (bool) {
-		require(hasMajorSpaceportByLocation[location], "system does not have major spaceport");
-	}
-
+	
 	// Spaceports buy and sell resources
 	mapping(uint256 => bool) hasSpaceportByLocation;
 	function _hasSpaceport(uint256 location) internal {
 		require(hasSpaceportByLocation[location], "system does not have spaceport");
+	}
+
+	function _atSpaceport(uint256 user) internal {
+		_hasSpaceport(locationById[user]);
 	}
 
 	mapping(uint256 => uint256[9]) inventoryByLocation;
@@ -147,6 +546,7 @@ contract MoonbasePermaverseAlpha {
 
 	// transfers resources to a spaceport
 	function _toSpaceport(address from, uint256 location, uint256 id, uint256 amount) internal {
+		_atSpaceport(_user(from));
 		resources.safeTransferFrom(from, address(this), id, amount, bytes(""));
 		inventoryByLocation[location][id-1] = inventoryByLocation[location][id-1] + amount;
 	}
@@ -158,6 +558,7 @@ contract MoonbasePermaverseAlpha {
 
 	// transfers resources from a spaceport
 	function _fromSpaceport(address to, uint256 location, uint256 id, uint256 amount) internal {
+		_atSpaceport(_user(to));
 		resources.safeTransferFrom(address(this), to, id, amount, bytes(""));
 		inventoryByLocation[location][id-1] = inventoryByLocation[location][id-1] - amount;
 	}
@@ -165,8 +566,9 @@ contract MoonbasePermaverseAlpha {
 	// Users can build a spaceport in a system without one
 	// This costs 1 $MOONBASE and 1,000,000 Credits
 	mapping(uint256 => uint256) spaceportOwnerById;
-	function buildSpaceport(uint256 location) public {
-		require(!hasSpaceportByLocation[location] && !hasMajorSpaceportByLocation[location], "system has a spaceport");
+	function buildSpaceport() public {
+		uint256 location = locationById[_user(msg.sender)];
+		require(!hasSpaceportByLocation[location] && !hasSpacebaseByLocation[location], "system has a spaceport");
 		
 		// transfer moonbase
 		moonbase.transfer(msg.sender, address(this), 10 ** 18);
@@ -227,23 +629,88 @@ contract MoonbasePermaverseAlpha {
 		require(credits >= cost, "not enough credits");
 		cost = cost - 4;
 	}
+	/*
+		Users can buy resources at spaceports
+		1% or a minimum of 1 credit is transferred to the owner of the spaceport
+		the remaining credits are transferred to the spaceport
+		and the resources are transferred to the user
+		
+	*/
 
-	function buyFromSpaceport(uint256 location, uint256 id, uint256 amount) public {
+	function buyFromSpaceport(uint256 id, uint256 amount) public {
+		uint256 u = _user(msg.sender);
+		_atSpaceport(u);
+		uint256 location = locationById[u];
 		uint256 cost = _costOf(location, id, amount);
 		uint256 tax = (cost > 199) ? cost/100 : 1;
 		require(cost - tax > 0, "cost is too low");
+		_landOnBody(u);
 		_toSpaceport(msg.sender, location, 1, cost - tax);
 		_toSpaceportOwner(msg.sender, location, 1, tax);
 		_fromSpaceport(msg.sender, location, id, amount);
 	}
 
-	function sellToSpaceport(uint256 location, uint256 id, uint256 amount) public {
+	/*
+		Users can sell resources at spaceports
+		1% or a minimum of 1 resource is transferred to the owner of the spaceport
+		the remaining resources are transferred to the spaceport
+		and the credits are transferred to the user
+		
+	*/
+
+	function sellToSpaceport(uint256 id, uint256 amount) public {
+		uint256 u = _user(msg.sender);
+		_atSpaceport(u);
+		uint256 location = locationById[u];
 		uint256 cost = _willPay(location, id, amount);
 		uint256 tax = (amount > 199) ? amount/100 : 1;
 		require(amount - tax > 0, "amount is too low");
+		_landOnBody(u);
 		_toSpaceport(msg.sender, location, id, amount - tax);
 		_toSpaceportOwner(msg.sender, location, id, tax);
 		_fromSpaceport(msg.sender, location, 1, cost);
+	}
+
+	/*
+		Users can craft shields at spaceports
+		It costs 1 Iron Ore and 1 credit per unit.
+		1000 shields cost 1000 iron ore and 1000 credits.
+		The credits are sent directly to the owner of the spaceport
+	*/
+
+	uint256 shieldCraftOreCost = 1;
+	function craftShields(uint256 amount) {
+		uint256 u = _user(msg.sender);
+		_atSpaceport(u);
+		uint256 location = locationById[u];
+		uint256 shieldcap = ships.itemById(active).shield_capacity;
+		uint256 currentShields = shieldsById[u];
+		require(currentShields + amount <= shieldcap,"too many shields");
+		_landOnBody(u);
+		_toSpaceport(msg.sender, location, 3, amount*shieldCraftOreCost);
+		_toSpaceportOwner(msg.sender, location, 1, amount);
+		shieldsById[u] += amount;
+	}
+	/*
+		Users can craft fuel at spaceports
+		It costs 10 Liquid Hydrogen and 10000 credits per unit.
+		1000 warp fuel costs 10,000 Liquid Hydrogen and 10,000,000 credits.
+		The credits are sent directly to the owner of the spaceport
+	*/
+
+	uint256 fuelCraftLHCost = 10;
+	function craftFuel(uint256 amount) {
+		uint256 u = _user(msg.sender);
+		_atSpaceport(u);
+		_landOnBody(u);
+		uint256 location = locationById[u];
+	
+		uint256 currentFuel = fuelById[u];
+		require(currentFuel + amount <= 5000,"too much fuel");
+		
+		_toSpaceport(msg.sender, location, 2, amount*fuelCraftLHCost);
+		_toSpaceportOwner(msg.sender, location, 10000, amount);
+		fuelById[u] += amount;
 	}
 
 	// --------------------------------------------------------------------------------------
@@ -450,7 +917,6 @@ contract MoonbasePermaverseAlpha {
 	// IN-SYSTEM ACTIVITY -------------------------------------------------------------
 	// --------------------------------------------------------------------------------
 	// Exploring Planets --------------------------------------------------------------
-
 	function exploreBody(
 		uint256 location, 
 		uint256 planetId, 
@@ -458,10 +924,11 @@ contract MoonbasePermaverseAlpha {
 		bool isMoon) public {
 
 		require(lastExploredBlockById[id] + 1000 > block.number,"wait longer");
-		uint256 user = captainByAddress[msg.sender];
+		uint256 u = _user(msg.sender);
+		_landOnBody(u);
 		uint256 id = bodyId(location, planetId, moonId, isMoon);
 		if (discovererByBodyId[id] == 0) {
-			discovererByBodyId[id] = user;
+			discovererByBodyId[id] = u;
 		}
 
 		uint256[10] yields = _getResourceYield(location, planetId, moonId, isMoon);
@@ -482,13 +949,13 @@ contract MoonbasePermaverseAlpha {
 	function mineAsteroids(uint256 location) public {
 
 		require(asteroidsBySystemId[location] > 0, "no asteroids left");
-		uint256 user = captainByAddress[msg.sender];
+		uint256 u = _user(msg.sender);
 
 		uint256 kek = uint256(keccak256(
 			abi.encodePacked(
 				toString(block.number),
 				toString(location),
-				toString(user)
+				toString(u)
 				)
 			));
 
@@ -499,10 +966,26 @@ contract MoonbasePermaverseAlpha {
 	}
 
 
+
+
 	// --------------------------------------------------------------------------------
 	// IN-SYSTEM ACTIVITY -------------------------------------------------------------
 	// --------------------------------------------------------------------------------
 	// NPC Fighting -------------------------------------------------------------------
+
+	function _getUserAttack(uint256 u) internal returns (uint256) {
+		
+		Weapon wep = weaponByWeaponId[weaponById[u]];
+		uint256 shipEnergyRegen = ships.itemById(activeShipById[u]).energy_regen;
+		uint256 dps = wep.damage*wep.fire_rate;
+		uint256 dmg = wep.damage*energyById[u]/wep.energy_use;
+
+		uint256 timeToUseEnergy = energyById[u]/(wep.energy_use * wep.fire_rate);
+
+		uint256 timeToUse
+
+	}
+
 	function _generateNPC() internal returns (uint256 attack, uint256 defense, uint256 xp, uint256 credits) {
 		attack = uint256(keccak256(block.number)) % 16001;
 		defense = uint256(keccak256(block.number)) % 16001;
@@ -511,7 +994,7 @@ contract MoonbasePermaverseAlpha {
 	}
 
 	function _fightNPC(uint256 location) public returns (bool) {
-		uint256 user = captainByAddress[msg.sender];
+		uint256 user = _user(msg.sender);
 		_userIsHere(user, location);
 		(uint256 attack, uint256 defense, uint256 xp, uint256 credits) = _generateNPC();
 		(uint256 atk, uint256 def) = _getUserCombatStats();
@@ -579,6 +1062,20 @@ contract MoonbasePermaverseAlpha {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 	function join(uint256 tokenId) public {
 		_isCaptainOwner(tokenId, msg.sender);
 		//mint ship
@@ -608,7 +1105,7 @@ contract MoonbasePermaverseAlpha {
 	}
 
 	function buyShip(uint256 tokenId) public {
-		_hasMajorSpaceport()
+		_hasSpacebase()
 		// if you are in system with major Spaceport
 		// burn existing ship
 		// mint new ship
@@ -620,15 +1117,15 @@ contract MoonbasePermaverseAlpha {
 	
 
 constructor() {
-		hasMajorSpaceportByLocation[0] = true;
-		hasMajorSpaceportByLocation[13] = true;
-		hasMajorSpaceportByLocation[42] = true;
-		hasMajorSpaceportByLocation[69] = true;
-		hasMajorSpaceportByLocation[137] = true;
-		hasMajorSpaceportByLocation[420] = true;
-		hasMajorSpaceportByLocation[42069] = true;
-		hasMajorSpaceportByLocation[69420] = true;
-		hasMajorSpaceportByLocation[137137] = true;
+		hasSpacebaseByLocation[0] = true;
+		hasSpacebaseByLocation[13] = true;
+		hasSpacebaseByLocation[42] = true;
+		hasSpacebaseByLocation[69] = true;
+		hasSpacebaseByLocation[137] = true;
+		hasSpacebaseByLocation[420] = true;
+		hasSpacebaseByLocation[42069] = true;
+		hasSpacebaseByLocation[69420] = true;
+		hasSpacebaseByLocation[137137] = true;
 	}
 
 
