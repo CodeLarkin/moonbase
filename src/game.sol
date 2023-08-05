@@ -1038,29 +1038,88 @@ contract MoonbasePermaverseAlpha {
 		return win;
 
 	}
-
-	function fightPirates(uint256 location) public {
-		uint256 win = _fightNPC(location);
-		if (win) {
-			repById += 10;
+	// reputation ----------------------------------------------------------------
+	mapping (uint256 => uint256) bountyById;
+	uint256 neutral_rep = 50000;
+	uint256 bounty_credits_per_bad_rep = 1000;
+	function _isGood(uint256 rep) internal view returns (bool) {
+		if (rep >= neutral_rep) {
+			return true;
 		} else {
-			repById += 1;
+			return false;
+		}
+	}
+	function _increaseRep(uint256 u, uint256 amount) internal {
+		repById[u] += amount;
+		if (!_isGood(repById[u])) {
+			bountyById[u] = bounty_credits_per_bad_rep * (neutral_rep - repById[u]);
+		}
+	}
+	}
+
+	function _decreaseRep(uint256 u, uint256 amount) internal {
+		if (repById[u] >= amount) {
+			repById[u] -= amount;
+		} else {
+			repById[u] = 0;
+		}
+		if (!_isGood(repById[u])) {
+			bountyById[u] = bounty_credits_per_bad_rep * (neutral_rep - repById[u]);
 		}
 	}
 
-	function huntInnocents(uint256 location) public {
-		uint256 win = _fightNPC(location);
+
+
+	
+	
+
+
+
+	function fightPirates() public {
+		
+		uint256 u = _user(msg.sender);
+		uint256 win = _fightNPC(locationById[u]);
 		if (win) {
-			repById -= 1;
+			_increaseRep(u,10);
 		} else {
-			repById -= 10;
+			_increaseRep(u,1);
 		}
 	}
 
+	function huntInnocents() public {
+		uint256 u = _user(msg.sender);
+		uint256 win = _fightNPC(locationById[u]);
+		if (win) {
+			_decreaseRep(u,1);
+		} else {
+			_decreaseRep(u,10);
+		}
+	}
+
+	// ------------------------------------------------------------------------------
+	// Colonists resources #9
+	uint256 rep_penalty_for_murder = 0;
+	function _killColonists(address user, uint256 amount) internal {
+		uint256 u = _user(user);
+		resources.burn(user,9,amount);
+		_decreaseRep(u,amount*rep_penalty_for_murder);
+	}
+
+	function killColonists(uint256 amount) public {
+		_killColonists(msg.sender,amount);
+	}
 
 
+	function stealFromSpaceport(uint256 id, uint256 amount) public {
+		uint256 u = _user(msg.sender);
+		_atSpaceport(u);
+		uint256 location = locationById[u];
+		require(repById[u] < neutral_rep, "rep must be bad");
+		_landOnBody(u);
+		
 
 
+	}
 
 
 
